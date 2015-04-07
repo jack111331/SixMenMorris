@@ -3,10 +3,27 @@ from pygame.locals import *
 from time import sleep
 import Othello, Othello_AI
 
-class Board():
-	# const COLOR_W = 1;
-	# const COLOR_B = 2;
+def Othello():
+	def __init__(self):
+		pass
+	def Gui(self):
+		
+		WHITE = (0,0,0)
+		BLACK = (221,170,0)
 
+def winorlose(board):
+	if board.chess == 64:
+		if board.white > board.black:
+			return "white"
+		return "black"
+	elif board.white == 0:
+		return "black"
+	elif board.black == 0:
+		return "white"
+	else:
+		return False
+
+class Board():
 	def __init__(self):
 		self.black = 2
 		self.white = 2
@@ -21,7 +38,7 @@ class Board():
 			[0,0,0,0,0,0,0,0],# 5
 			[0,0,0,0,0,0,0,0],# 6
 			[0,0,0,0,0,0,0,0],# 7
-			]	
+			]
 		self.neighbor = [
 			(2,2),(3,2),(4,2),(5,2),
 			(2,3),(5,3),
@@ -36,6 +53,10 @@ class Board():
 		print ("turn:%i"%self.turn)
 	def draw_board(self):
 		global window
+		win = winorlose(board)
+		if win:
+			print ("Player " + win + " is Winner")
+			return "done"
 		draw()
 		window.fill(BLACK)
 		draw()
@@ -58,6 +79,12 @@ class Board():
 	def flop_board(self,x,y):
 		self.board[y][x] = self.turn
 		cross = Othello.checkAllDir(self.board,x,y,self.turn)
+		if self.turn == 1:
+			self.white += len(cross) + 1
+			self.black -= len(cross)
+		elif self.turn == 2:
+			self.white -= len(cross)
+			self.black += len(cross) + 1
 		self.board = Othello.flop(self.board,cross,self.turn)
 		self.neighbor = Othello.addNeighbor(self.board,self.neighbor,x,y)
 
@@ -65,13 +92,13 @@ class Player():
 	def __init__(self,color):
 		self.color = color
 	def flop(self,board,x,y):
-		board.flop_board(x,y)
-		board.chess += 1
-		board.changeplayer()
 		if board.chess == 64:
 			win = Othello.winorlose(board.board)
 			print (win + " is Winner")
 			return "done"
+		board.flop_board(x,y)
+		board.chess += 1
+		board.changeplayer()
 		board.countLegalMoves()
 		if board.probableMove == []:
 			board.changeplayer()
@@ -80,14 +107,26 @@ class Player():
 		pygame.display.flip()
 
 class ComputerPlayer(Player):
-	def next_move():
-		pass
+	def next_move(self,board):
+		FINDMAX = "max"
+		copy_of_board = []
+		for i in board.board:
+			copy_of_board.append(i.copy())
+		copy_of_neighbor = board.neighbor[::]
+		if board.chess > 50 :
+			AI = Othello_AI.firstGameTreeStep(copy_of_board,copy_of_neighbor,
+				  self.color+1,10,FINDMAX,board.chess,board.white,board.black)
+			self.flop(board,AI[1][0],AI[1][1])
+		else:
+			AI = Othello_AI.firstGameTreeStep(copy_of_board,copy_of_neighbor,
+				  self.color+1,4,FINDMAX,board.chess,board.white,board.black)
+			self.flop(board,AI[1][0],AI[1][1])
 	def flop(self,board,x,y):
 		super().flop(board,x,y)
 	def __str__(self):
 		return "computer"
 
-class HumenPlayer(Player):
+class HumanPlayer(Player):
 	def __str__(self):
 		return "human"
 
@@ -113,14 +152,12 @@ def draw():
 	pygame.draw.line(window, WHITE,(0,400),(400,400),5)# col 8
 
 # def color
-WHITE = (122,122,122)
-BLACK = (61,61,61)
 # load image
 white_chess = pygame.image.load("image/white_chess.png")
 black_chess = pygame.image.load("image/black_chess.png")
 probable_moves = pygame.image.load("image/probable_moves.png")
-single_play = pygame.image.load("image/single_play.png")
 multiple_play = pygame.image.load("image/multiple_play.png")
+single_play = pygame.image.load("image/single_play.png")
 #pygame
 pygame.init()
 window = pygame.display.set_mode((400, 450))
@@ -129,8 +166,9 @@ pygame.display.set_caption(' Othello ')
 board = Board()
 players = []
 # draw select menu
-window.blit(single_play,(100, 0))
-window.blit(multiple_play,(100, 40))
+window.fill(BLACK)
+window.blit(multiple_play,(100, 0))
+window.blit(single_play,(100, 40))
 # does game begin
 begin = False
 while True: # main game loop
@@ -144,26 +182,23 @@ while True: # main game loop
 				if y > 0 and y < 29:
 					if x > 100 and x < 300:
 						begin = "multiple"
-						players = [HumenPlayer(0),HumenPlayer(1)]
+						players = [HumanPlayer(0),HumanPlayer(1)]
 						board.draw_board()
 				elif y > 40 and y < 72:
 					if x > 100 and x < 300:
-						players = [ComputerPlayer(0),ComputerPlayer(1)]
-						begin = "single"
+						players = [HumanPlayer(0),ComputerPlayer(1)]
+						begin = "single_play"
 						board.draw_board()
-			elif begin == "multiple" and board.chess != 64 and str(players[board.turn-1]) == "human": # single play
+			elif begin == "multiple" and board.chess != 64 and str(players[board.turn-1]) == "human": # single_play play
 				x, y = event.pos
 				x, y = x//50, y//50
 				if (x, y) in board.probableMove:
 					players[board.turn-1].flop(board,x,y)
-			elif begin == "single" and board.chess != 64 and str(players[board.turn-1]) == "human": # AI
+			elif begin == "single_play" and board.chess != 64 and str(players[board.turn-1]) == "human": # AI
 				x, y = event.pos
 				x, y = x//50, y//50
 				if (x, y) in board.probableMove:
 					players[board.turn-1].flop(board,x,y)
-	if begin == "single" and board.chess != 64 and str(players[board.turn-1]) == "computer":
-		x, y = Othello_AI.main(board, board.probableMove)
-		players[board.turn-1].flop(board,x,y)
-		sleep(1)
-
+	if begin == "single_play" and board.chess != 64 and str(players[board.turn-1]) == "computer":
+		players[board.turn-1].next_move(board)
 	pygame.display.flip()

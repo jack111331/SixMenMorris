@@ -1,5 +1,7 @@
 from pprint import pprint
 
+
+
 def checkempty(board,x,y,direction,color):# direction = (1,0) right (-1,0) left
 	cross = []
 	crossed = False
@@ -64,9 +66,10 @@ def addNeighbor(board,neighbor,x,y):
 	return neighbor
 
 def flop(board,moves,color):
+	a = board[::]
 	for pos in moves:
-		board[pos[1]][pos[0]] = color
-	return board
+		a[pos[1]][pos[0]] = color
+	return a
 
 def winorlose(board):
 	black = 0
