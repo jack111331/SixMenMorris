@@ -3,13 +3,71 @@ from pygame.locals import *
 from time import sleep
 import Othello, Othello_AI
 
-def Othello():
+WHITE = (0,0,0)
+BLACK = (221,170,0)
+white_chess = pygame.image.load("image/white_chess.png")
+black_chess = pygame.image.load("image/black_chess.png")
+probable_moves = pygame.image.load("image/probable_moves.png")
+multiple_play = pygame.image.load("image/multiple_play.png")
+single_play = pygame.image.load("image/single_play.png")
+number_list = {
+	"0":pygame.image.load("image/number_0.png"),
+	"1":pygame.image.load("image/number_1.png"),
+	"2":pygame.image.load("image/number_2.png"),
+	"3":pygame.image.load("image/number_3.png"),
+	"4":pygame.image.load("image/number_4.png"),
+	"5":pygame.image.load("image/number_5.png"),
+	"6":pygame.image.load("image/number_6.png"),
+	"7":pygame.image.load("image/number_7.png"),
+	"8":pygame.image.load("image/number_8.png"),
+	"9":pygame.image.load("image/number_9.png"),
+}
+
+class othelloBoardGame():
 	def __init__(self):
-		pass
-	def Gui(self):
-		
-		WHITE = (0,0,0)
-		BLACK = (221,170,0)
+		self.board = Board()
+		self.players = []
+	def define_players(self,firstplayer,secondplayer):
+		self.players.append(firstplayer)
+		self.players.append(secondplayer)
+
+class othelloGui(othelloBoardGame):
+	def check_event(self,game_status,window):
+		for event in pygame.event.get():
+			self.ifend(event)
+			try:
+				x, y = self.ifclick(event)
+			except:
+				pass
+			else:
+				if game_status == "begin":
+					button1 = self.inrange(x,100,300,y,0,29)
+					button2 = self.inrange(x,100,300,y,40,72)
+					if button1:
+						self.define_players(ComputerPlayer(0),HumanPlayer(1))
+						game_status = "multiple"
+						self.board.draw_board(window)
+					elif button2:
+						self.define_players(HumanPlayer(0),ComputerPlayer(1))
+						game_status = "single_play"
+						self.board.draw_board(window)
+				elif (self.board.chess != 64 and str(self.players[self.board.turn-1]) == "human"): # single_play play
+					x, y = x//50, y//50
+					if (x, y) in self.board.probableMove:
+						self.players[self.board.turn-1].flop(self.board,x,y,window)
+		return game_status
+	def inrange(self,x,str_x,end_x,y,str_y,end_y):
+		if y > str_y and y < end_y:
+			if x > str_x and x < end_x:
+				return True
+	def ifend(self,event):
+		if event.type == QUIT:
+			pygame.quit()
+			sys.exit()
+	def ifclick(self,event):
+		if event.type == MOUSEBUTTONUP:
+			return event.pos
+		return False
 
 def winorlose(board):
 	if board.chess == 64:
@@ -51,15 +109,10 @@ class Board():
 		Othello.pprint(self.board)
 		print ("white:%i,black:%i,total:%i"%(self.white,self.black,self.chess))
 		print ("turn:%i"%self.turn)
-	def draw_board(self):
-		global window
-		win = winorlose(board)
-		if win:
-			print ("Player " + win + " is Winner")
-			return "done"
-		draw()
+	def draw_board(self,window):
+		draw(window)
 		window.fill(BLACK)
-		draw()
+		draw(window)
 		for i in range(8):
 			for e in range(8):
 				if self.board[e][i] != 0:
@@ -69,6 +122,24 @@ class Board():
 						window.blit(black_chess,(i*50,e*50))
 		for i in self.probableMove:
 			window.blit(probable_moves,(i[0]*50,i[1]*50))
+		# white chess total
+		window.blit(white_chess,(0,405))
+		try:
+			split_chess = str(self.white)[0],str(self.white)[1]
+			window.blit(number_list[split_chess[0]], (50,403))
+			window.blit(number_list[split_chess[1]], (100,403))
+		except:
+			split_chess = str(self.white)[0]
+			window.blit(number_list[split_chess[0]], (50,404))
+		# black chess total
+		window.blit(black_chess,(350,405))
+		try:
+			split_chess = str(self.black)[0],str(self.black)[1]
+			window.blit(number_list[split_chess[0]], (250,404))
+			window.blit(number_list[split_chess[1]], (300,404))
+		except:
+			split_chess = str(self.black)[0]
+			window.blit(number_list[split_chess[0]], (300,404))
 	def changeplayer(self):
 		if self.turn == 1:
 			self.turn = 2
@@ -91,11 +162,7 @@ class Board():
 class Player():
 	def __init__(self,color):
 		self.color = color
-	def flop(self,board,x,y):
-		if board.chess == 64:
-			win = Othello.winorlose(board.board)
-			print (win + " is Winner")
-			return "done"
+	def flop(self,board,x,y,window):
 		board.flop_board(x,y)
 		board.chess += 1
 		board.changeplayer()
@@ -103,26 +170,35 @@ class Player():
 		if board.probableMove == []:
 			board.changeplayer()
 			board.countLegalMoves()
-		board.draw_board()
+		board.draw_board(window)
 		pygame.display.flip()
+		if board.chess == 64:
+			win = Othello.winorlose(board.board)
+			print (win + " is Winner")
+			return "done"
 
 class ComputerPlayer(Player):
-	def next_move(self,board):
+	def next_move(self,board,window):
 		FINDMAX = "max"
 		copy_of_board = []
 		for i in board.board:
 			copy_of_board.append(i.copy())
 		copy_of_neighbor = board.neighbor[::]
-		if board.chess > 50 :
-			AI = Othello_AI.firstGameTreeStep(copy_of_board,copy_of_neighbor,
-				  self.color+1,10,FINDMAX,board.chess,board.white,board.black)
-			self.flop(board,AI[1][0],AI[1][1])
+		len_legalMoves = len(Othello.legal_moves(copy_of_board,copy_of_neighbor,self.color+1))
+		if len_legalMoves:
+			if board.chess > 50 :
+				AI = Othello_AI.firstGameTreeStep(copy_of_board,copy_of_neighbor,
+					  self.color+1,9,FINDMAX,board.chess,board.white,board.black)
+				self.flop(board,AI[1][0],AI[1][1],window)
+			else:
+				AI = Othello_AI.firstGameTreeStep(copy_of_board,copy_of_neighbor,
+					  self.color+1,5,FINDMAX,board.chess,board.white,board.black)
+				self.flop(board,AI[1][0],AI[1][1],window)
 		else:
-			AI = Othello_AI.firstGameTreeStep(copy_of_board,copy_of_neighbor,
-				  self.color+1,4,FINDMAX,board.chess,board.white,board.black)
-			self.flop(board,AI[1][0],AI[1][1])
-	def flop(self,board,x,y):
-		super().flop(board,x,y)
+			board.changeplayer()
+			board.countLegalMoves()
+			board.draw_board(window)
+			pygame.display.flip()
 	def __str__(self):
 		return "computer"
 
@@ -130,8 +206,7 @@ class HumanPlayer(Player):
 	def __str__(self):
 		return "human"
 
-def draw():
-	global window
+def draw(window):
 	window.fill(BLACK)
 	# row
 	pygame.draw.line(window, WHITE,(46,0),(46,400),5)# row 1
@@ -149,56 +224,23 @@ def draw():
 	pygame.draw.line(window, WHITE,(0,246),(400,246),5)# col 5
 	pygame.draw.line(window, WHITE,(0,296),(400,296),5)# col 6
 	pygame.draw.line(window, WHITE,(0,346),(400,346),5)# col 7
-	pygame.draw.line(window, WHITE,(0,400),(400,400),5)# col 8
+	pygame.draw.line(window, WHITE,(0,399),(400,399),4)# col 8
 
-# def color
-# load image
-white_chess = pygame.image.load("image/white_chess.png")
-black_chess = pygame.image.load("image/black_chess.png")
-probable_moves = pygame.image.load("image/probable_moves.png")
-multiple_play = pygame.image.load("image/multiple_play.png")
-single_play = pygame.image.load("image/single_play.png")
-#pygame
-pygame.init()
-window = pygame.display.set_mode((400, 450))
-pygame.display.set_caption(' Othello ')
+def othelloGuiGame():
+	pygame.init()
+	window = pygame.display.set_mode((400, 450))
+	pygame.display.set_caption(' Othello ')
+	window.fill(BLACK)
+	window.blit(multiple_play,(100, 0))
+	window.blit(single_play,(100, 40))
+	game_status = "begin"
+	OG = othelloGui()
+	while True:
+		game_status = OG.check_event(game_status,window)
+		if len(OG.players) != 0:
+			if OG.board.chess != 65 and str(OG.players[OG.board.turn-1]) == "computer":
+				OG.players[OG.board.turn-1].next_move(OG.board,window)
+		pygame.display.flip()
 
-board = Board()
-players = []
-# draw select menu
-window.fill(BLACK)
-window.blit(multiple_play,(100, 0))
-window.blit(single_play,(100, 40))
-# does game begin
-begin = False
-while True: # main game loop
-	for event in pygame.event.get():
-		if event.type == QUIT:
-			pygame.quit()
-			sys.exit()
-		elif event.type == MOUSEBUTTONUP:
-			if not begin:
-				x, y = event.pos
-				if y > 0 and y < 29:
-					if x > 100 and x < 300:
-						begin = "multiple"
-						players = [HumanPlayer(0),HumanPlayer(1)]
-						board.draw_board()
-				elif y > 40 and y < 72:
-					if x > 100 and x < 300:
-						players = [HumanPlayer(0),ComputerPlayer(1)]
-						begin = "single_play"
-						board.draw_board()
-			elif begin == "multiple" and board.chess != 64 and str(players[board.turn-1]) == "human": # single_play play
-				x, y = event.pos
-				x, y = x//50, y//50
-				if (x, y) in board.probableMove:
-					players[board.turn-1].flop(board,x,y)
-			elif begin == "single_play" and board.chess != 64 and str(players[board.turn-1]) == "human": # AI
-				x, y = event.pos
-				x, y = x//50, y//50
-				if (x, y) in board.probableMove:
-					players[board.turn-1].flop(board,x,y)
-	if begin == "single_play" and board.chess != 64 and str(players[board.turn-1]) == "computer":
-		players[board.turn-1].next_move(board)
-	pygame.display.flip()
+if __name__ == "__main__":
+	othelloGuiGame()

@@ -19,42 +19,58 @@ def changeMAXMIN(mm):
 def choseMAXMIN(Alpha,eva,mm):
 	if mm == FINDMAX:
 		if eva > Alpha:
-			return eva
-		return Alpha
+			return True
+		return False
 	if eva < Alpha:
-		return eva
-	return Alpha
+		return True
+	return False
 
-def evaluation(board,x,y,chess,color,neighbor,white,black):
+def evaluation(board,chess,color,neighbor,white,black):
 	proportion = [
-				(15,(7,2,1)),
-				(30,(5,3,2)),
-				(45,(3,4,3)),
-				(60,(1,4,5)),
+				(10,(8,1,2)),
+				(20,(7,2,2)),
+				(30,(6,3,2)),
+				(40,(5,4,2)),
+				(100,(3,4,3)),
+				(55,(3,3,4)),
 				(65,(0,0,10)),
 				]
-	GB = XYGoddOrBad(board,x,y)
+	GB = XYGoddOrBad(board,color)
 	len_legal = nubmerLegalMove(board,neighbor,color)
 	number = number_chess(color,white,black)
 	for i in proportion:
 		if chess <= i[0]:
-			return ((GB * i[1][0]) + (len_legal * i[1][1]) + (number * i[1][2])) /10
+			Answer = ((GB * i[1][0]) + (len_legal * i[1][1]) + (number * i[1][2]))
+			return Answer
 
 def nubmerLegalMove(board,neighbor,color):
 	return len(Othello.legal_moves(board,neighbor,color))
 
-def XYGoddOrBad(board,x,y):
+def XYGoddOrBad(board,color):
 	board_GorB = [
-				[4,-2,3,2,2,3,-2,4],
-				[-2,-2,-1,-1,-1,-1,-2,-2],
-				[3,-1,1,1,1,1,-1,3],
-				[2,-1,1,0,0,1,-1,2],
-				[2,-1,1,0,0,1,-1,2],
-				[3,-1,1,1,1,1,-1,3],
-				[-2,-2,-1,-1,-1,-1,-2,-2],
-				[4,-2,3,2,2,3,-2,4],
+				[100,-10,6,3,3,6,-10,100],
+				[-10,-10,-5,-5,-5,-5,-10,-10],
+				[6,-5,4,4,4,4,-5,6],
+				[3,-5,4,1,1,4,-5,3],
+				[3,-5,4,1,1,4,-5,3],
+				[6,-5,4,4,4,4,-5,6],
+				[-10,-10,-5,-5,-5,-5,-10,-10],
+				[100,-10,6,3,3,6,-10,100],
 				]
-	return board_GorB[y][x]
+	total = 0
+	for y in range(8):
+		for x in range(8):
+			if color == 1:
+				if board[y][x] == 1:
+					total += board_GorB[y][x]
+				elif board[y][x] == 2:
+					total -= board_GorB[y][x]
+			elif color == 2:
+				if board[y][x] == 1:
+					total -= board_GorB[y][x]
+				elif board[y][x] == 2:
+					total += board_GorB[y][x]
+	return total
 
 def number_chess(color,white,black):
 	if color == 1:
@@ -65,6 +81,7 @@ def firstGameTreeStep(board,neighbor,startcolor,maxdepth,mm,chess,white,black):#
 	legalMoves = Othello.legal_moves(board,neighbor,startcolor)
 	Best_chose = None
 	next_mm = changeMAXMIN(mm)
+	a = {}
 	for i in legalMoves:
 		next_board = []
 		for e in board:
@@ -83,37 +100,23 @@ def firstGameTreeStep(board,neighbor,startcolor,maxdepth,mm,chess,white,black):#
 			next_white -= len(change)
 			next_black += len(change) + 1
 		next_color = changeplayer(startcolor)
-		posible_way = nextGameTreeStep(next_board,next_neighbor,next_color,maxdepth,2,{},next_mm,chess+1,next_white,next_black)
+		posible_way = nextGameTreeStep(next_board,next_neighbor,next_color,maxdepth,2,a,next_mm,chess+1,next_white,next_black)
 		if not Best_chose:
-			Best_chose = (posible_way,(i[0],i[1]))
-		elif type(Best_chose) == type(1):
-			askkeep = choseMAXMIN(Best_chose,posible_way,mm)
+			Best_chose = (posible_way[0],i[0],i[1])
+		elif type(posible_way[0]) == type(1):
+			askkeep = choseMAXMIN(Best_chose[0],posible_way[0],mm)
 			if askkeep:
-				Best_chose = (posible_way,(i[0],i[1]))
-	return Best_chose
+				Best_chose = (posible_way[0],i[0],i[1])
+	return Best_chose[0],(Best_chose[1],Best_chose[2])
 
 def nextGameTreeStep(board,neighbor,color,maxdepth,depth,AlphaBeta,mm,chess,white,black):
 	if depth >= maxdepth:
-		legalMoves = Othello.legal_moves(board,neighbor,color)
-		eva_list = []
-		for i in legalMoves:
-			a = evaluation(board,i[0],i[1],color,chess,neighbor,white,black)
-			if depth - 2 in AlphaBeta:
-				if mm == FINDMAX:
-					if a < AlphaBeta[depth-2]:
-						return a
-				elif mm == FINDMIN:
-					if a > AlphaBeta[depth-2]:
-						return a
-			eva_list.append(a)
-		try:
-			return max(eva_list)
-		except:
-			return 0
+		Answer = evaluation(board,chess,color,neighbor,white,black)
+		return (Answer,0)
 	else:
 		legalMoves = Othello.legal_moves(board,neighbor,color)
 		if not legalMoves:
-			return False
+			return evaluation(board,chess,color,neighbor,white,black)
 		next_mm = changeMAXMIN(mm)
 		new_depth = depth + 1
 		for i in legalMoves:
@@ -137,22 +140,22 @@ def nextGameTreeStep(board,neighbor,color,maxdepth,depth,AlphaBeta,mm,chess,whit
 			posible_way = nextGameTreeStep(next_board,next_neighbor,next_color,
 				maxdepth,new_depth,AlphaBeta,next_mm,chess+1,next_white,next_black)
 			# Alpha Beta Cut
-			if depth - 2 in AlphaBeta:
-				if mm == FINDMAX:
-					if posible_way < AlphaBeta[depth-2]:
-						AlphaBeta[depth] = posible_way
-						break
-				elif mm == FINDMIN:
-					if posible_way > AlphaBeta[depth-2]:
-						AlphaBeta[depth] = posible_way
-						break
 			if posible_way:
-				if depth not in AlphaBeta:
-					AlphaBeta[depth] = posible_way
+				if depth - 2 in AlphaBeta:
+					if mm == FINDMAX:
+						if posible_way[0] < AlphaBeta[depth-2][0]:
+							AlphaBeta[depth] = (posible_way[0],i)
+							break
+					elif mm == FINDMIN:
+						if posible_way[0] > AlphaBeta[depth-2][0]:
+							AlphaBeta[depth] = (posible_way[0],i)
+							break
+				elif depth not in AlphaBeta:
+					AlphaBeta[depth] = (posible_way[0],i)
 				else:
-					askkeep = choseMAXMIN(AlphaBeta[depth],posible_way,mm)
+					askkeep = choseMAXMIN(AlphaBeta[depth][0],posible_way[0],mm)
 					if askkeep:
-						AlphaBeta[depth] = askkeep
+						AlphaBeta[depth] = (posible_way[0],i)
 		try:
 			return AlphaBeta[depth]
 		except:

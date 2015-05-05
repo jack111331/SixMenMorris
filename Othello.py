@@ -1,7 +1,5 @@
 from pprint import pprint
 
-
-
 def checkempty(board,x,y,direction,color):# direction = (1,0) right (-1,0) left
 	cross = []
 	crossed = False
@@ -107,7 +105,8 @@ def test():
 	probableMove = legal_moves(board,neighbor,1)
 	while True:
 		print (probableMove)
-		pos = raw_input()
+		pprint(board)
+		pos = input()
 		x,y = pos.split()
 		x,y = int(x), int(y)
 		if (x, y) in probableMove:
@@ -121,7 +120,6 @@ def test():
 			else:
 				turn = 1
 			probableMove = legal_moves(board,neighbor,turn)
-			pprint(board)
 			if chess == 64:
 				win = winorlose(board)
 				print (win + " is Winner")
