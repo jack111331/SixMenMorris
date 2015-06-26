@@ -44,7 +44,7 @@ class othelloGui(othelloBoardGame):
 					button1 = self.inrange(x,100,300,y,0,29)
 					button2 = self.inrange(x,100,300,y,40,72)
 					if button1:
-						self.define_players(ComputerPlayer(0),HumanPlayer(1))
+						self.define_players(HumanPlayer(0),HumanPlayer(1))
 						game_status = "multiple"
 						self.board.draw_board(window)
 					elif button2:
