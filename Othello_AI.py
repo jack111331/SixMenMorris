@@ -1,4 +1,5 @@
 import Othello
+from random import randint
 
 PLAYER1 = 1
 PLAYER2 = 2
@@ -77,92 +78,8 @@ def number_chess(color, white, black):
 		return white - black
 	return black - white
 
-def firstGameTreeStep(board, neighbor, startcolor, maxdepth, mm, chess, white, black):# now step is 1
-	legalMoves = Othello.legal_moves(board, neighbor, startcolor)
-	Best_chose = None
-	next_mm = changeMAXMIN(mm)
-	a = {}
-	for i in legalMoves:
-		next_board = []
-		for e in board:
-			next_board.append(e.copy())
-		change = Othello.checkAllDir(board, i[0], i[1], startcolor)
-		next_board[i[1]][i[0]] = startcolor
-		next_board = Othello.flop(next_board, change, startcolor)
-		next_neighbor = neighbor[::]
-		next_neighbor = Othello.addNeighbor(next_board, next_neighbor, i[0], i[1])
-		next_white = white
-		next_black = black
-		if startcolor == 1:
-			next_white += len(change) + 1
-			next_black -= len(change)
-		elif startcolor == 2:
-			next_white -= len(change)
-			next_black += len(change) + 1
-		next_color = changeplayer(startcolor)
-		posible_way = nextGameTreeStep(next_board, next_neighbor, next_color, maxdepth, 2, a, next_mm, chess+1, next_white, next_black)
-		if not Best_chose:
-			Best_chose = (posible_way[0], i[0], i[1])
-		elif type(posible_way[0]) == type(1):
-			askkeep = choseMAXMIN(Best_chose[0], posible_way[0], mm)
-			if askkeep:
-				Best_chose = (posible_way[0], i[0], i[1])
-	return Best_chose[0], (Best_chose[1], Best_chose[2])
-
-def nextGameTreeStep(board, neighbor, color, maxdepth, depth, AlphaBeta, mm, chess, white, black):
-	if depth >= maxdepth:
-		Answer = evaluation(board, chess, color, neighbor, white, black)
-		return (Answer, 0)
-	else:
-		legalMoves = Othello.legal_moves(board, neighbor, color)
-		if not legalMoves:
-			return evaluation(board, chess, color, neighbor, white, black)
-		next_mm = changeMAXMIN(mm)
-		new_depth = depth + 1
-		for i in legalMoves:
-			next_board = []
-			for e in board:
-				next_board.append(e.copy())
-			change = Othello.checkAllDir(board, i[0], i[1], color)
-			next_board[i[1]][i[0]] = color
-			next_board = Othello.flop(next_board, change, color)
-			next_neighbor = neighbor[::]
-			next_white = white
-			next_black = black
-			if color == 1:
-				next_white += len(change) + 1
-				next_black -= len(change)
-			elif color == 2:
-				next_white -= len(change)
-				next_black += len(change) + 1
-			next_neighbor = Othello.addNeighbor(next_board, next_neighbor, i[0], i[1])
-			next_color = changeplayer(color)
-			posible_way = nextGameTreeStep(next_board, next_neighbor, next_color, 
-				maxdepth, new_depth, AlphaBeta, next_mm, chess+1, next_white, next_black)
-			# Alpha Beta Cut
-			if posible_way:
-				if depth - 2 in AlphaBeta:
-					if mm == FINDMAX:
-						if posible_way[0] < AlphaBeta[depth-2][0]:
-							AlphaBeta[depth] = (posible_way[0], i)
-							break
-					elif mm == FINDMIN:
-						if posible_way[0] > AlphaBeta[depth-2][0]:
-							AlphaBeta[depth] = (posible_way[0], i)
-							break
-				elif depth not in AlphaBeta:
-					AlphaBeta[depth] = (posible_way[0], i)
-				else:
-					askkeep = choseMAXMIN(AlphaBeta[depth][0], posible_way[0], mm)
-					if askkeep:
-						AlphaBeta[depth] = (posible_way[0], i)
-		try:
-			return AlphaBeta[depth]
-		except:
-			return False
-
-def main(board, probableMove):
-	return probableMove[0]
+def firstGameTreeStep(board, startcolor, maxdepth):
+	return board.probableMove[0]
 
 if __name__ == "__main__":
 	# main()
