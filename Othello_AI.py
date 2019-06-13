@@ -1,104 +1,83 @@
 import Othello
-from random import randint
+import copy
+import random
 
 PLAYER1 = 1
 PLAYER2 = 2
 
-FINDMAX = "max"
-FINDMIN = "min"
+
+BOARD_VALUE = [
+    [10, -5, 6, 3, 3, 6, -5, 10],
+    [-5, -5, -5, -5, -5, -5, -5, -5],
+    [6, -5, 4, 4, 4, 4, -5, 6],
+    [3, -5, 4, 1, 1, 4, -5, 3],
+    [3, -5, 4, 1, 1, 4, -5, 3],
+    [6, -5, 4, 4, 4, 4, -5, 6],
+    [-5, -5, -5, -5, -5, -5, -5, -5],
+    [10, -5, 6, 3, 3, 6, -5, 10]]
+
+
+class Move:
+    def __init__(self, value, pos):
+        self.value = value
+        self.pos = pos
+
 
 def changeplayer(turn):
-	if turn == PLAYER1:
-		return PLAYER2
-	return PLAYER1
+    if turn == PLAYER1:
+        return PLAYER2
+    return PLAYER1
 
-def changeMAXMIN(mm):
-	# if mm == FINDMAX:
-	# 	return FINDMIN
-	return FINDMAX
-
-def choseMAXMIN(Alpha, eva, mm):
-	if mm == FINDMAX:
-		if eva > Alpha:
-			return True
-		return False
-	if eva < Alpha:
-		return True
-	return False
-
-def evaluation(board, chess, color, neighbor, white, black):
-	proportion = [
-				(10, (8, 1, 2)), 
-				(20, (7, 2, 2)), 
-				(30, (6, 3, 2)), 
-				(40, (5, 4, 2)), 
-				(100, (3, 4, 3)), 
-				(55, (3, 3, 4)), 
-				(65, (0, 0, 10)), 
-				]
-	GB = XYGoddOrBad(board, color)
-	len_legal = nubmerLegalMove(board, neighbor, color)
-	number = number_chess(color, white, black)
-	for i in proportion:
-		if chess <= i[0]:
-			Answer = ((GB * i[1][0]) + (len_legal * i[1][1]) + (number * i[1][2]))
-			return Answer
 
 def nubmerLegalMove(board, neighbor, color):
-	return len(Othello.legal_moves(board, neighbor, color))
+    return len(Othello.legal_moves(board, neighbor, color))
 
-def XYGoddOrBad(board, color):
-	board_GorB = [
-				[100, -10, 6, 3, 3, 6, -10, 100], 
-				[-10, -10, -5, -5, -5, -5, -10, -10], 
-				[6, -5, 4, 4, 4, 4, -5, 6], 
-				[3, -5, 4, 1, 1, 4, -5, 3], 
-				[3, -5, 4, 1, 1, 4, -5, 3], 
-				[6, -5, 4, 4, 4, 4, -5, 6], 
-				[-10, -10, -5, -5, -5, -5, -10, -10], 
-				[100, -10, 6, 3, 3, 6, -10, 100], 
-				]
-	total = 0
-	for y in range(8):
-		for x in range(8):
-			if color == 1:
-				if board[y][x] == 1:
-					total += board_GorB[y][x]
-				elif board[y][x] == 2:
-					total -= board_GorB[y][x]
-			elif color == 2:
-				if board[y][x] == 1:
-					total -= board_GorB[y][x]
-				elif board[y][x] == 2:
-					total += board_GorB[y][x]
-	return total
+
+def evaluation_move(board, x, y):
+    return BOARD_VALUE[y][x]
+
 
 def number_chess(color, white, black):
-	if color == 1:
-		return white - black
-	return black - white
+    if color == 1:
+        return white - black
+    return black - white
 
-def firstGameTreeStep(board, startcolor, maxdepth):
-	return board.probableMove[0]
 
-if __name__ == "__main__":
-	# main()
-	board = [
-		#0 1 2 3 4 5 6 7       1 is white 2 is WHITE
-		[0, 0, 0, 0, 0, 0, 0, 0], # 0
-		[0, 0, 0, 0, 0, 0, 0, 0], # 1
-		[0, 0, 0, 0, 0, 0, 0, 0], # 2
-		[0, 0, 0, 1, 2, 0, 0, 0], # 3
-		[0, 0, 0, 2, 1, 0, 0, 0], # 4
-		[0, 0, 0, 0, 0, 0, 0, 0], # 5
-		[0, 0, 0, 0, 0, 0, 0, 0], # 6
-		[0, 0, 0, 0, 0, 0, 0, 0], # 7
-		]
-	neighbor = [
-		(2, 2), (3, 2), (4, 2), (5, 2), 
-		(2, 3), (5, 3), 
-		(2, 4), (5, 4), 
-		(2, 5), (3, 5), (4, 5), (5, 5), 
-		]
-	AI = fristGameTreeStep(board, neighbor, 2, 5, FINDMAX)
-	print (AI)
+def find_max(board, max_depth, depth=1, alpha_beta=None):
+    if alpha_beta is None:
+        alpha_beta = []
+
+    if len(board.probableMove) == 0:
+        return []
+
+    for x, y in board.probableMove:
+        value = evaluation_move(board, x, y)
+        copped_board = copy.deepcopy(board)
+        copped_board.flip_chess(x, y)
+        copped_board.chess += 1
+        copped_board.changeplayer()
+        copped_board.countLegalMoves()
+
+        if copped_board.chess == 64:
+            return (Move(1000, (x, y)), )
+
+        if depth == max_depth:
+            alpha_beta.append(Move(value, (x, y)))
+        else:
+            next_moves = find_max(copped_board, max_depth, depth + 1)
+            if next_moves != []:
+                next_move = random.choice(next_moves)
+                alpha_beta.append(Move(value - next_move.value, (x, y)))
+            else:
+                alpha_beta.append(Move(value, (x, y)))
+
+    biggest_move = []
+    biggest = -1000
+    for move in alpha_beta:
+        if move.value > biggest:
+            biggest = move.value
+            biggest_move.clear()
+            biggest_move.append(move)
+        elif move.value == biggest:
+            biggest_move.append(move)
+    return biggest_move
