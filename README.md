@@ -1,16 +1,21 @@
 # Othello
+黑白棋的 UI 和 AI 系統，此 AI 使用樹狀展開棋手的機會，並使用 AlphaBeta Cut 來使 AI 更快速運算。
 
-A GUI game about Othello
+Othello UI & AI System, this AI use tree to examine the possible chances, then use AlphaBeta Cut to make AI calculate faster.
 
-Require: <br><br>
+## Reqiurement
+- Python3
+    - Pygame
 
-Python3.4 <br>
-PYgame <br><br>
+## Execute
+GUI 版
 
-if you want to try GUI mode: <br><br>
+```
+python3 Othello_GUI.py
+```
 
--- python3.4 Othello_GUI.py <br><br>
+Console 版
 
-if you want to try GUI mode: <br><br>
-
--- python3.4 Othello.py <br>
+```
+python3 Othello.py
+```
