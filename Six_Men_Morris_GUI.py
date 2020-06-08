@@ -14,24 +14,12 @@ WINDOW_HEIGHT = 768
 CHESS_SIZE = 45
 
 # Load Resource
-white_chess = pygame.image.load("image/white_chess.png")
-white_chess = pygame.transform.scale(white_chess, (CHESS_SIZE, CHESS_SIZE))
-black_chess = pygame.image.load("image/black_chess.png")
-black_chess = pygame.transform.scale(black_chess, (CHESS_SIZE, CHESS_SIZE))
-board = pygame.image.load("image/board.png")
-board = pygame.transform.scale(board, (WINDOW_WIDTH, WINDOW_HEIGHT))
+WHITE_CHESS_IMG_RESOURCE = "image/white_chess.png"
+BLACK_CHESS_IMG_RESOURCE = "image/black_chess.png"
+BOARD_IMG_RESOURCE = "image/board.png"
+
 probable_moves = pygame.image.load("image/probable_moves.png")
-multiple_play = pygame.image.load("image/multiple_play.png")
-single_play = pygame.image.load("image/single_play.png")
 
-class othelloBoardGame():
-	def __init__(self):
-		self.board = Board()
-		self.players = []
-
-	def define_players(self, firstplayer, secondplayer):
-		self.players.append(firstplayer)
-		self.players.append(secondplayer)
 
 class SixMenMorrisBoard():
 	WHITE_CHESS = False
@@ -290,8 +278,20 @@ class HumanPlayer(Player):
 				print("Current state: ", self.game_board.current_state)
 
 class SixMenMorrisScene():
+	in_scene = None
+	scene_pool = {}
 	def __init__(self, window):
 		self.window = window
+
+	def push_scene_into_pool(scene_name, scene):
+		SixMenMorrisScene.scene_pool[scene_name] = scene
+
+	def change_between_scene(scene_name):
+		SixMenMorrisScene.in_scene = scene_name
+		if SixMenMorrisScene.scene_pool[SixMenMorrisScene.in_scene] != None:
+			SixMenMorrisScene.scene_pool[SixMenMorrisScene.in_scene].change_scene()
+		else:
+			print("No such scene")
 
 	def change_scene(self):
 		self.window.fill((BLACK))
@@ -310,12 +310,38 @@ class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 	scene_name = "Main Menu"
 	def __init__(self, window):
 		super().__init__(window)
+		self.single_player_button = pygame.image.load("image/single_player_button.png")
+		self.two_player_button = pygame.image.load("image/two_player_button.png")
+		single_player_button_size = self.single_player_button.get_rect().size
+		self.single_player_button_pos = (WINDOW_WIDTH/2 - single_player_button_size[0]/2, 500 - single_player_button_size[1]/2)
+		two_player_button_pos_size = self.two_player_button.get_rect().size
+		self.two_player_button_pos = (WINDOW_WIDTH/2 - two_player_button_pos_size[0]/2, 600 - two_player_button_pos_size[1]/2)
 
 	def change_scene(self):
 		super().change_scene()
+		self.window.blit(self.single_player_button, self.single_player_button_pos)
+		self.window.blit(self.two_player_button, self.two_player_button_pos)
+		pygame.display.flip()
 
 	def check_event(self, event):
 		super().check_event(event)
+		try:
+			x, y = self.ifclick(event)
+			coord = (x, y)
+		except Exception:
+			pass
+		else:
+			if self.single_player_button_pos[0] <= coord[0] <= (self.single_player_button_pos[0] + self.single_player_button.get_rect().size[0]) and self.single_player_button_pos[1] <= coord[1] <= self.single_player_button_pos[1] + self.single_player_button.get_rect().size[1]:
+				print("click single player button")
+				SixMenMorrisScene.push_scene_into_pool(SixMenMorrisInGameScene.scene_name, SixMenMorrisInGameScene(self.window, [HumanPlayer(), ComputerPlayer()]))
+				SixMenMorrisScene.scene_pool[SixMenMorrisInGameScene.scene_name].assign_board(SixMenMorrisBoard())
+				SixMenMorrisScene.change_between_scene(SixMenMorrisInGameScene.scene_name)
+
+			elif self.two_player_button_pos[0] <= coord[0] <= (self.two_player_button_pos[0] + self.two_player_button.get_rect().size[0]) and self.two_player_button_pos[1] <= coord[1] <= self.two_player_button_pos[1] + self.two_player_button.get_rect().size[1]:
+				print("click two player button")
+				SixMenMorrisScene.push_scene_into_pool(SixMenMorrisInGameScene.scene_name, SixMenMorrisInGameScene(self.window, [HumanPlayer(), HumanPlayer()]))
+				SixMenMorrisScene.scene_pool[SixMenMorrisInGameScene.scene_name].assign_board(SixMenMorrisBoard())
+				SixMenMorrisScene.change_between_scene(SixMenMorrisInGameScene.scene_name)
 
 class SixMenMorrisInGameScene(SixMenMorrisScene):
 	scene_name = "In Game"
@@ -347,6 +373,12 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 		super().__init__(window)
 		self.game_board = None
 		self.player_list = players
+		self.white_chess_sprite = pygame.image.load(WHITE_CHESS_IMG_RESOURCE)
+		self.white_chess_sprite = pygame.transform.scale(self.white_chess_sprite, (CHESS_SIZE, CHESS_SIZE))
+		self.black_chess_sprite = pygame.image.load(BLACK_CHESS_IMG_RESOURCE)
+		self.black_chess_sprite = pygame.transform.scale(self.black_chess_sprite, (CHESS_SIZE, CHESS_SIZE))
+		self.board_sprite = pygame.image.load(BOARD_IMG_RESOURCE)
+		self.board_sprite = pygame.transform.scale(self.board_sprite, (WINDOW_WIDTH, WINDOW_HEIGHT))
 
 	def get_index(row, column):
 		return SixMenMorrisInGameScene.CHESS_START_WIDTH[row] + column
@@ -359,15 +391,15 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 
 	def update_scene(self):
 		self.window.fill((BLACK))
-		self.window.blit(board, (0, 0))
+		self.window.blit(self.board_sprite, (0, 0))
 		if self.game_board != None:
 			for i in range(len(self.CHESS_COORD)):
 				chess_type_in_index = self.game_board.get_chess_in(i)
 				correct_coord = (self.CHESS_COORD[i][0] - CHESS_SIZE/2, self.CHESS_COORD[i][1] - CHESS_SIZE/2)
 				if chess_type_in_index == SixMenMorrisBoard.WHITE_CHESS:
-					self.window.blit(white_chess, correct_coord)
+					self.window.blit(self.white_chess_sprite, correct_coord)
 				elif chess_type_in_index == SixMenMorrisBoard.BLACK_CHESS:
-					self.window.blit(black_chess, correct_coord)
+					self.window.blit(self.black_chess_sprite, correct_coord)
 				else:
 					pass
 			pygame.display.flip()
@@ -383,22 +415,21 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 		self.player_list[self.game_board.current_player].act(event)
 		self.update_scene()
 
+
+
+
 def SixMenMorrisGuiGame():
 	pygame.init()
 	pygame.font.init()
 	window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 	pygame.display.set_caption(" Six Men's Morris ")
-	scene_pool = {
-					SixMenMorrisMainMenuScene.scene_name: SixMenMorrisMainMenuScene(window), 
-					SixMenMorrisInGameScene.scene_name: SixMenMorrisInGameScene(window, [HumanPlayer(), HumanPlayer()]) 
-	}
-	scene_pool[SixMenMorrisInGameScene.scene_name].assign_board(SixMenMorrisBoard())
-	in_scene = SixMenMorrisInGameScene.scene_name
-	scene_pool[in_scene].change_scene()
+	
+	SixMenMorrisScene.push_scene_into_pool(SixMenMorrisMainMenuScene.scene_name, SixMenMorrisMainMenuScene(window))
+	SixMenMorrisScene.change_between_scene(SixMenMorrisMainMenuScene.scene_name)
 
 	while True:
 		for event in pygame.event.get():
-			scene_pool[in_scene].check_event(event)
+			SixMenMorrisScene.scene_pool[SixMenMorrisScene.in_scene].check_event(event)
 
 if __name__ == "__main__":
 	SixMenMorrisGuiGame()
