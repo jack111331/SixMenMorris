@@ -205,7 +205,11 @@ class SixMenMorrisBoard():
 					self.change_player()
 				return act_result
 		else:
-			print("Unrecognize state")		
+			print("Unrecognize state")
+
+	def get_possible_act_list(self):
+		# TODO 
+		pass
 
 class Player():
 	def __init__(self):
