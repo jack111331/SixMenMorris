@@ -12,11 +12,14 @@ WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
 
 CHESS_SIZE = 45
+TIP_SIZE = 50
 
 # Load Resource
 WHITE_CHESS_IMG_RESOURCE = "image/white_chess.png"
 BLACK_CHESS_IMG_RESOURCE = "image/black_chess.png"
 BOARD_IMG_RESOURCE = "image/board.png"
+TIP_IMG_RESOURCE = "image/tip.png"
+TIP_FOCUS_IMG_RESOURCE = "image/tip-focus.png"
 
 probable_moves = pygame.image.load("image/probable_moves.png")
 
@@ -209,7 +212,17 @@ class SixMenMorrisBoard():
 
 	def get_possible_act_list(self):
 		# TODO 
-		pass
+		if self.current_state == self.BOARD_STATE_PLACE:
+			return [i for i in range(16) if self.get_chess_in(i) == self.EMPTY]
+		elif self.current_state == self.BOARD_STATE_MOVE:
+			return [i for i in range(16) if self.get_chess_in(i) == self.current_player]
+		elif self.current_state == self.BOARD_STATE_MOVING:
+			if self.chess_count[self.current_player] <= 3:
+				return [i for i in range(16) if self.get_chess_in(i) == self.EMPTY]
+			else:
+				return [i for i in range(16) if (i in self.BESIDE_INDEX[self.move_chess_temp] and self.get_chess_in(i) == self.EMPTY)]
+		elif self.current_state == self.BOARD_STATE_KILLING:
+				return [i for i in range(16) if self.get_chess_in(i) == self.get_enemy()]
 
 class Player():
 	def __init__(self):
@@ -383,6 +396,10 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 		self.black_chess_sprite = pygame.transform.scale(self.black_chess_sprite, (CHESS_SIZE, CHESS_SIZE))
 		self.board_sprite = pygame.image.load(BOARD_IMG_RESOURCE)
 		self.board_sprite = pygame.transform.scale(self.board_sprite, (WINDOW_WIDTH, WINDOW_HEIGHT))
+		self.tip_sprite = pygame.image.load(TIP_IMG_RESOURCE)
+		self.tip_sprite = pygame.transform.scale(self.tip_sprite, (TIP_SIZE, TIP_SIZE))
+		self.tip_focus_sprite = pygame.image.load(TIP_FOCUS_IMG_RESOURCE)
+		self.tip_focus_sprite = pygame.transform.scale(self.tip_focus_sprite, (TIP_SIZE, TIP_SIZE))
 
 	def get_index(row, column):
 		return SixMenMorrisInGameScene.CHESS_START_WIDTH[row] + column
@@ -397,15 +414,21 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 		self.window.fill((BLACK))
 		self.window.blit(self.board_sprite, (0, 0))
 		if self.game_board != None:
+			possible_act_list = self.game_board.get_possible_act_list()
 			for i in range(len(self.CHESS_COORD)):
 				chess_type_in_index = self.game_board.get_chess_in(i)
-				correct_coord = (self.CHESS_COORD[i][0] - CHESS_SIZE/2, self.CHESS_COORD[i][1] - CHESS_SIZE/2)
+				correct_chess_coord = (self.CHESS_COORD[i][0] - CHESS_SIZE/2, self.CHESS_COORD[i][1] - CHESS_SIZE/2)
+				correct_tip_coord = (self.CHESS_COORD[i][0] - TIP_SIZE/2, self.CHESS_COORD[i][1] - TIP_SIZE/2)
 				if chess_type_in_index == SixMenMorrisBoard.WHITE_CHESS:
-					self.window.blit(self.white_chess_sprite, correct_coord)
+					self.window.blit(self.white_chess_sprite, correct_chess_coord)
 				elif chess_type_in_index == SixMenMorrisBoard.BLACK_CHESS:
-					self.window.blit(self.black_chess_sprite, correct_coord)
-				else:
-					pass
+					self.window.blit(self.black_chess_sprite, correct_chess_coord)
+				if i in possible_act_list:
+					self.window.blit(self.tip_sprite, correct_tip_coord)
+
+			if self.game_board.move_chess_temp != -1:
+				correct_tip_focus_coord = (self.CHESS_COORD[self.game_board.move_chess_temp][0] - TIP_SIZE/2, self.CHESS_COORD[self.game_board.move_chess_temp][1] - TIP_SIZE/2)
+				self.window.blit(self.tip_focus_sprite, correct_tip_focus_coord)
 			pygame.display.flip()
 		else:
 			print("Board is none.")
