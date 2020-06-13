@@ -21,8 +21,7 @@ BOARD_IMG_RESOURCE = "image/board.png"
 TIP_IMG_RESOURCE = "image/tip.png"
 TIP_FOCUS_IMG_RESOURCE = "image/tip-focus.png"
 
-probable_moves = pygame.image.load("image/probable_moves.png")
-
+game_font = None
 
 class SixMenMorrisBoard():
 	WHITE_CHESS = False
@@ -85,6 +84,7 @@ class SixMenMorrisBoard():
 		self.move_chess_temp = -1
 		self.latest_killed = -1
 		self.chess_count = [0]*2
+		self.kill_count = [0]*2
 
 	def get_chess_in(self, index):
 		return self.chess_list[index]
@@ -148,6 +148,7 @@ class SixMenMorrisBoard():
 		if self.check_formed_mill(index) == self.current_player:
 			return self.ACT_CHESS_ILLEGAL
 		self.chess_count[self.chess_list[index]] -= 1
+		self.kill_count[self.chess_list[index]] += 1
 		self.chess_list[index] = self.EMPTY
 		return self.ACT_CHESS_SUCCESS
 
@@ -228,7 +229,10 @@ class SixMenMorrisBoard():
 		if self.current_state == self.BOARD_STATE_PLACE:
 			return [i for i in range(16) if self.get_chess_in(i) == self.EMPTY]
 		elif self.current_state == self.BOARD_STATE_MOVE:
-			return [i for i in range(16) if (self.get_chess_in(i) == self.current_player and self.is_beside_has_empty(i) == True)]
+			if self.chess_count[self.current_player] <= 3:
+				return [i for i in range(16) if self.get_chess_in(i) == self.current_player]				
+			else:
+				return [i for i in range(16) if (self.get_chess_in(i) == self.current_player and self.is_beside_has_empty(i) == True)]
 		elif self.current_state == self.BOARD_STATE_MOVING:
 			if self.chess_count[self.current_player] <= 3:
 				return [i for i in range(16) if self.get_chess_in(i) == self.EMPTY]
@@ -258,14 +262,14 @@ class Player():
 
 
 class ComputerPlayer(Player):
-	def __init__(self, depth=4):
+	def __init__(self, depth=8):
 		super().__init__()
 		self.depth = depth
 		self.ai = None
 
 	def assign_board(self, board):
 		super().assign_board(board)
-		self.ai = AlphaBetaPruning(board)
+		self.ai = AlphaBetaPruning()
 
 	def act(self, event):
 		click_index, max_value = self.ai.search(self.game_board, self.depth, self.ai.MYTURN, self.game_board.current_player)
@@ -382,6 +386,7 @@ class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 
 class SixMenMorrisEndGameScene(SixMenMorrisScene):
 	scene_name = "End Game"
+	END_GAME_TEXT_POSITION = (WINDOW_WIDTH/2, WINDOW_HEIGHT/3)
 	def __init__(self, window):
 		super().__init__(window)
 		self.main_menu_button = pygame.image.load("image/main_menu_button.png")
@@ -391,6 +396,12 @@ class SixMenMorrisEndGameScene(SixMenMorrisScene):
 	def change_scene(self):
 		super().change_scene()
 		self.window.blit(self.main_menu_button, self.main_menu_button_pos)
+		game_font = pygame.font.SysFont("comicsansms", 72)
+		if SixMenMorrisScene.scene_pool[SixMenMorrisInGameScene.scene_name].game_board.chess_count[0] <= 2:
+			text = game_font.render("Black team wins", True, (0, 128, 196))
+		else:
+			text = game_font.render("White team wins", True, (0, 128, 196))
+		self.window.blit(text, (int(self.END_GAME_TEXT_POSITION[0]-text.get_rect().size[0]//2), int(self.END_GAME_TEXT_POSITION[1]-text.get_rect().size[1]//2)))
 		pygame.display.flip()
 
 	def check_event(self, event):
@@ -423,13 +434,9 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 		0, 3, 6, 10, 13
 	]
 
-	BESIDE_INDEX = [
-		[1, 6],	[0, 2, 4], [1, 9],
-		[4, 7],	[1, 3, 5], [4, 8],
-		[0, 7, 13], [3, 10], [5, 9, 12],
-		[7, 11], [10, 12, 14], [8, 10],
-		[6, 14], [10, 13, 15], [9, 14]
-	]
+	TURN_TEXT_POSITION = (WINDOW_WIDTH//2, WINDOW_HEIGHT//24)
+	WHITE_EATEN_TEXT_POSITION = (WINDOW_WIDTH//6, WINDOW_HEIGHT//24*23)
+	BLACK_EATEN_TEXT_POSITION = (WINDOW_WIDTH - WINDOW_WIDTH//6, WINDOW_HEIGHT//24*23)
 
 	def __init__(self, window, players):
 		super().__init__(window)
@@ -463,6 +470,21 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 
 		self.window.fill((BLACK))
 		self.window.blit(self.board_sprite, (0, 0))
+		# Display text
+		game_font = pygame.font.SysFont("comicsansms", 60)
+		if self.game_board.current_player == self.game_board.WHITE_CHESS:
+			text = game_font.render("White team's turn", True, (0, 128, 196))
+		else:
+			text = game_font.render("Black team's turn", True, (0, 128, 196))			
+		self.window.blit(text, (int(self.TURN_TEXT_POSITION[0]-text.get_rect().size[0]//2), int(self.TURN_TEXT_POSITION[1]-text.get_rect().size[1]//2)))
+
+		game_font = pygame.font.SysFont("comicsansms", 30)
+		text = game_font.render("White chess killed: " + str(self.game_board.kill_count[self.game_board.WHITE_CHESS]), True, (0, 128, 196))			
+		self.window.blit(text, (int(self.WHITE_EATEN_TEXT_POSITION[0]-text.get_rect().size[0]//2), int(self.WHITE_EATEN_TEXT_POSITION[1]-text.get_rect().size[1]//2)))
+		text = game_font.render("Black chess killed: " + str(self.game_board.kill_count[self.game_board.BLACK_CHESS]), True, (0, 128, 196))			
+		self.window.blit(text, (int(self.BLACK_EATEN_TEXT_POSITION[0]-text.get_rect().size[0]//2), int(self.BLACK_EATEN_TEXT_POSITION[1]-text.get_rect().size[1]//2)))
+
+
 		if self.game_board != None:
 			possible_act_list = self.game_board.get_possible_act_list()
 			for i in range(len(self.CHESS_COORD)):
@@ -489,6 +511,7 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 
 	def check_event(self, event):
 		super().check_event(event)
+		# FIXME when move, it work
 		self.player_list[self.game_board.current_player].act(event)
 		self.update_scene()
 
@@ -496,6 +519,7 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 def SixMenMorrisGuiGame():
 	pygame.init()
 	pygame.font.init()
+
 	window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 	pygame.display.set_caption(" Six Men's Morris ")
 	
