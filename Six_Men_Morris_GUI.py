@@ -1,6 +1,6 @@
 import pygame
 import sys
-import Othello_AI
+from Six_Men_Morris_AI import *
 import random
 from pygame.locals import *
 from pprint import pprint
@@ -79,9 +79,11 @@ class SixMenMorrisBoard():
 	def __init__(self):
 		self.current_player = self.WHITE_CHESS
 		self.current_state = self.BOARD_STATE_PLACE
+		self.previous_state = self.BOARD_STATE_PLACE
 		self.chess_list = [self.EMPTY] * 16
 		self.placed_chess = 0
 		self.move_chess_temp = -1
+		self.latest_killed = -1
 		self.chess_count = [0]*2
 
 	def get_chess_in(self, index):
@@ -89,6 +91,12 @@ class SixMenMorrisBoard():
 
 	def get_enemy(self):
 		return not self.current_player
+
+	def is_beside_has_empty(self, index):
+		for i in range(len(self.BESIDE_INDEX[index])):
+			if self.get_chess_in(self.BESIDE_INDEX[index][i]) == self.EMPTY:
+				return True
+		return False
 
 	def check_formed_mill(self, index):
 		target_chess = self.get_chess_in(index)
@@ -159,17 +167,21 @@ class SixMenMorrisBoard():
 
 		return living_black_chess <= 2 or living_white_chess <= 2
 
+	def change_state(self, state):
+		self.previous_state = self.current_state		
+		self.current_state = state
+
 	def act_chess(self, index):
 		if self.current_state == self.BOARD_STATE_PLACE:
 			if self.get_chess_in(index) == self.EMPTY:
 				self.place_chess(index)
 				formed_mill = self.check_formed_mill(index)
 				if formed_mill != self.EMPTY:
-					self.current_state = self.BOARD_STATE_KILLING
+					self.change_state(self.BOARD_STATE_KILLING)
 				else:
 					self.change_player()
 				if self.placed_chess >= 12:
-					self.current_state = self.BOARD_STATE_MOVE
+					self.change_state(self.BOARD_STATE_MOVE)
 				return self.ACT_CHESS_SUCCESS
 			else:
 				return self.ACT_CHESS_OCCUPIED
@@ -178,7 +190,7 @@ class SixMenMorrisBoard():
 			if self.get_chess_in(index) != self.current_player:
 				return self.ACT_CHESS_ILLEGAL
 			self.move_chess_temp = index
-			self.current_state = self.BOARD_STATE_MOVING
+			self.change_state(self.BOARD_STATE_MOVING)
 			return self.ACT_CHESS_SUCCESS
 
 		elif self.current_state == self.BOARD_STATE_MOVING:
@@ -186,9 +198,9 @@ class SixMenMorrisBoard():
 			if act_result == self.ACT_CHESS_SUCCESS:
 				self.move_chess_temp = -1
 				if self.check_formed_mill(index) == self.current_player:
-					self.current_state = self.BOARD_STATE_KILLING
+					self.change_state(self.BOARD_STATE_KILLING)
 				else:
-					self.current_state = self.BOARD_STATE_MOVE
+					self.change_state(self.BOARD_STATE_MOVE)
 					self.change_player()
 			return act_result
 
@@ -198,13 +210,14 @@ class SixMenMorrisBoard():
 			else:
 				act_result = self.kill_chess(index)
 				if act_result == self.ACT_CHESS_SUCCESS:
+					self.latest_killed = index
 					if self.check_end_game() == True:
-						self.current_state = self.BOARD_STATE_ENDGAME
+						self.change_state(self.BOARD_STATE_ENDGAME)
 						return act_result
 					elif self.placed_chess == 12:
-						self.current_state = self.BOARD_STATE_MOVE
+						self.change_state(self.BOARD_STATE_MOVE)
 					else:
-						self.current_state = self.BOARD_STATE_PLACE
+						self.change_state(self.BOARD_STATE_PLACE)
 					self.change_player()
 				return act_result
 		else:
@@ -215,7 +228,7 @@ class SixMenMorrisBoard():
 		if self.current_state == self.BOARD_STATE_PLACE:
 			return [i for i in range(16) if self.get_chess_in(i) == self.EMPTY]
 		elif self.current_state == self.BOARD_STATE_MOVE:
-			return [i for i in range(16) if self.get_chess_in(i) == self.current_player]
+			return [i for i in range(16) if (self.get_chess_in(i) == self.current_player and self.is_beside_has_empty(i) == True)]
 		elif self.current_state == self.BOARD_STATE_MOVING:
 			if self.chess_count[self.current_player] <= 3:
 				return [i for i in range(16) if self.get_chess_in(i) == self.EMPTY]
@@ -245,12 +258,19 @@ class Player():
 
 
 class ComputerPlayer(Player):
-	def __init__(self, depth=3):
+	def __init__(self, depth=4):
 		super().__init__()
 		self.depth = depth
+		self.ai = None
+
+	def assign_board(self, board):
+		super().assign_board(board)
+		self.ai = AlphaBetaPruning(board)
 
 	def act(self, event):
-		pass
+		click_index, max_value = self.ai.search(self.game_board, self.depth, self.ai.MYTURN, self.game_board.current_player)
+		print("AI choose index ", click_index, ", its value is ", max_value)
+		place_chess_result = self.game_board.act_chess(click_index)
 
 class HumanPlayer(Player):
 	# detect coord range
@@ -360,6 +380,31 @@ class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 				SixMenMorrisScene.scene_pool[SixMenMorrisInGameScene.scene_name].assign_board(SixMenMorrisBoard())
 				SixMenMorrisScene.change_between_scene(SixMenMorrisInGameScene.scene_name)
 
+class SixMenMorrisEndGameScene(SixMenMorrisScene):
+	scene_name = "End Game"
+	def __init__(self, window):
+		super().__init__(window)
+		self.main_menu_button = pygame.image.load("image/main_menu_button.png")
+		main_menu_button_size = self.main_menu_button.get_rect().size
+		self.main_menu_button_pos = (WINDOW_WIDTH/2 - main_menu_button_size[0]/2, 500 - main_menu_button_size[1]/2)
+
+	def change_scene(self):
+		super().change_scene()
+		self.window.blit(self.main_menu_button, self.main_menu_button_pos)
+		pygame.display.flip()
+
+	def check_event(self, event):
+		super().check_event(event)
+		try:
+			x, y = self.ifclick(event)
+			coord = (x, y)
+		except Exception:
+			pass
+		else:
+			if self.main_menu_button_pos[0] <= coord[0] <= (self.main_menu_button_pos[0] + self.main_menu_button.get_rect().size[0]) and self.main_menu_button_pos[1] <= coord[1] <= self.main_menu_button_pos[1] + self.main_menu_button.get_rect().size[1]:
+				print("click main menu button")
+				SixMenMorrisScene.change_between_scene(SixMenMorrisMainMenuScene.scene_name)
+
 class SixMenMorrisInGameScene(SixMenMorrisScene):
 	scene_name = "In Game"
 	# detect coord range
@@ -411,6 +456,11 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 			self.player_list[i].assign_team(bool(i))
 
 	def update_scene(self):
+		if self.game_board.current_state == self.game_board.BOARD_STATE_ENDGAME:
+			SixMenMorrisScene.push_scene_into_pool(SixMenMorrisEndGameScene.scene_name, SixMenMorrisEndGameScene(self.window))
+			SixMenMorrisScene.change_between_scene(SixMenMorrisEndGameScene.scene_name)
+			return
+
 		self.window.fill((BLACK))
 		self.window.blit(self.board_sprite, (0, 0))
 		if self.game_board != None:
@@ -441,8 +491,6 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 		super().check_event(event)
 		self.player_list[self.game_board.current_player].act(event)
 		self.update_scene()
-
-
 
 
 def SixMenMorrisGuiGame():
