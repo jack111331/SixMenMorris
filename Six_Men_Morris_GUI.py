@@ -15,6 +15,7 @@ CHESS_SIZE = 45
 TIP_SIZE = 50
 
 # Load Resource
+BACKGROUND_IMG_RESOURCE = "image/background.png"
 WHITE_CHESS_IMG_RESOURCE = "image/white_chess.png"
 BLACK_CHESS_IMG_RESOURCE = "image/black_chess.png"
 BOARD_IMG_RESOURCE = "image/board.png"
@@ -351,15 +352,19 @@ class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 	scene_name = "Main Menu"
 	def __init__(self, window):
 		super().__init__(window)
+		self.background = pygame.image.load(BACKGROUND_IMG_RESOURCE)
+		self.background = pygame.transform.scale(self.background, (int(self.background.get_rect().size[0]*WINDOW_HEIGHT/WINDOW_WIDTH), WINDOW_HEIGHT))
 		self.single_player_button = pygame.image.load("image/single_player_button.png")
 		self.two_player_button = pygame.image.load("image/two_player_button.png")
 		single_player_button_size = self.single_player_button.get_rect().size
 		self.single_player_button_pos = (WINDOW_WIDTH/2 - single_player_button_size[0]/2, 500 - single_player_button_size[1]/2)
 		two_player_button_pos_size = self.two_player_button.get_rect().size
 		self.two_player_button_pos = (WINDOW_WIDTH/2 - two_player_button_pos_size[0]/2, 600 - two_player_button_pos_size[1]/2)
+		self.background_pos = (int(WINDOW_WIDTH//2-self.background.get_rect().size[0]//2), 0)
 
 	def change_scene(self):
 		super().change_scene()
+		self.window.blit(self.background, self.background_pos)
 		self.window.blit(self.single_player_button, self.single_player_button_pos)
 		self.window.blit(self.two_player_button, self.two_player_button_pos)
 		pygame.display.flip()
