@@ -25,14 +25,17 @@ TIP_FOCUS_IMG_RESOURCE = "image/tip-focus.png"
 game_font = None
 
 class SixMenMorrisBoard():
+	# Board Chess representation
 	WHITE_CHESS = False
 	BLACK_CHESS = True
 	EMPTY = 6666666
 
+	# Act result
 	ACT_CHESS_SUCCESS = 1450666
 	ACT_CHESS_OCCUPIED = 6661450
 	ACT_CHESS_ILLEGAL = 6666
 
+	# Board State
 	BOARD_STATE_PLACE = 66666
 	BOARD_STATE_MOVE = 66667
 	BOARD_STATE_MOVING = 66668
@@ -99,11 +102,15 @@ class SixMenMorrisBoard():
 				return True
 		return False
 
+	# Check if in that index form mill in straight line using POSSIBLE_MILL_FOR_INDEX 
+	# Return which side form mill in index
 	def check_formed_mill(self, index):
 		target_chess = self.get_chess_in(index)
+		# POSSIBLE_MILL_FOR_INDEX store the possible mill index used to locate possible mill precomputed from board
 		for i in range(len(self.POSSIBLE_MILL_FOR_INDEX[index])):
 			check_three_chess = self.POSSIBLE_MILL_FOR_INDEX[index][i]
 			found = True
+			# POSSIBLE_MILL store the possible mill chess index used to locate possible mill chess precomputed from board
 			for j in range(len(self.POSSIBLE_MILL[check_three_chess])):
 				check_chess_index = self.POSSIBLE_MILL[check_three_chess][j]
 				if self.get_chess_in(check_chess_index) != target_chess:
@@ -114,7 +121,6 @@ class SixMenMorrisBoard():
 		return self.EMPTY
 
 	def place_chess(self, index):
-		# FIXME if one can block another one's move?
 		self.chess_list[index] = self.current_player
 		self.placed_chess += 1
 		self.chess_count[self.current_player] += 1
@@ -125,6 +131,7 @@ class SixMenMorrisBoard():
 				return True
 		return False;
 
+	# Move chess from one place to another empty slot
 	def move_chess(self, from_index, to_index):
 		if from_index == -1 or to_index == -1:
 			print("Parameter error: ", from_index, to_index)
@@ -138,6 +145,7 @@ class SixMenMorrisBoard():
 			return self.ACT_CHESS_OCCUPIED
 
 		else:
+			# If ourself has less or equal to 3 chess alive, then it can move to any empty slot
 			if self.check_near(from_index, to_index) == True or self.chess_count[self.current_player] <= 3:
 				self.chess_list[to_index] = self.get_chess_in(from_index)
 				self.chess_list[from_index] = self.EMPTY
@@ -145,8 +153,10 @@ class SixMenMorrisBoard():
 			else:
 				return self.ACT_CHESS_ILLEGAL
 
+	# Kill enemy chess
 	def kill_chess(self, index):
-		if self.check_formed_mill(index) == self.current_player:
+		# Can't kill enemy chess in mill
+		if self.check_formed_mill(index) == self.get_enemy():
 			return self.ACT_CHESS_ILLEGAL
 		self.chess_count[self.chess_list[index]] -= 1
 		self.kill_count[self.chess_list[index]] += 1
@@ -173,10 +183,13 @@ class SixMenMorrisBoard():
 		self.previous_state = self.current_state		
 		self.current_state = state
 
+	# Act chess according to current state and user specified index
+	# Use above finite state machine to transform state to next state
 	def act_chess(self, index):
 		if self.current_state == self.BOARD_STATE_PLACE:
 			if self.get_chess_in(index) == self.EMPTY:
 				self.place_chess(index)
+				# if ourself formed mill, we can kill enemy chess, so move state to killing state
 				formed_mill = self.check_formed_mill(index)
 				if formed_mill != self.EMPTY:
 					self.change_state(self.BOARD_STATE_KILLING)
@@ -189,6 +202,7 @@ class SixMenMorrisBoard():
 				return self.ACT_CHESS_OCCUPIED
 
 		elif self.current_state == self.BOARD_STATE_MOVE:
+			# choose chess to move state
 			if self.get_chess_in(index) != self.current_player:
 				return self.ACT_CHESS_ILLEGAL
 			self.move_chess_temp = index
@@ -196,9 +210,11 @@ class SixMenMorrisBoard():
 			return self.ACT_CHESS_SUCCESS
 
 		elif self.current_state == self.BOARD_STATE_MOVING:
+			# use chosen chess to move to another empty slot state
 			act_result = self.move_chess(self.move_chess_temp, index)
 			if act_result == self.ACT_CHESS_SUCCESS:
 				self.move_chess_temp = -1
+				# if ourself formed mill, we can kill enemy chess, so move state to killing state
 				if self.check_formed_mill(index) == self.current_player:
 					self.change_state(self.BOARD_STATE_KILLING)
 				else:
@@ -207,9 +223,7 @@ class SixMenMorrisBoard():
 			return act_result
 
 		elif self.current_state == self.BOARD_STATE_KILLING:
-			if self.get_chess_in(index) != self.get_enemy():
-				return self.ACT_CHESS_ILLEGAL
-			else:
+			if self.get_chess_in(index) == self.get_enemy():
 				act_result = self.kill_chess(index)
 				if act_result == self.ACT_CHESS_SUCCESS:
 					self.latest_killed = index
@@ -222,11 +236,12 @@ class SixMenMorrisBoard():
 						self.change_state(self.BOARD_STATE_PLACE)
 					self.change_player()
 				return act_result
+			else:
+				return self.ACT_CHESS_ILLEGAL
 		else:
 			print("Unrecognize state")
 
 	def get_possible_act_list(self):
-		# TODO 
 		if self.current_state == self.BOARD_STATE_PLACE:
 			return [i for i in range(16) if self.get_chess_in(i) == self.EMPTY]
 		elif self.current_state == self.BOARD_STATE_MOVE:
@@ -240,8 +255,9 @@ class SixMenMorrisBoard():
 			else:
 				return [i for i in range(16) if (i in self.BESIDE_INDEX[self.move_chess_temp] and self.get_chess_in(i) == self.EMPTY)]
 		elif self.current_state == self.BOARD_STATE_KILLING:
-				return [i for i in range(16) if self.get_chess_in(i) == self.get_enemy()]
+			return [i for i in range(16) if (self.get_chess_in(i) == self.get_enemy() and self.check_formed_mill(i) != self.get_enemy())]
 
+# Player Abstract Class
 class Player():
 	def __init__(self):
 		self.team = None
@@ -262,6 +278,7 @@ class Player():
 		pass
 
 
+# Computer Player Concrete Class to define computer player's behavior
 class ComputerPlayer(Player):
 	def __init__(self, depth=8):
 		super().__init__()
@@ -277,6 +294,7 @@ class ComputerPlayer(Player):
 		print("AI choose index ", click_index, ", its value is ", max_value)
 		place_chess_result = self.game_board.act_chess(click_index)
 
+# Human Player Concrete Class to define human player's behavior
 class HumanPlayer(Player):
 	# detect coord range
 	CHESS_COORD_RANGE = 30
@@ -319,6 +337,7 @@ class HumanPlayer(Player):
 					print("Place ", click_index, " illegal")
 				print("Current state: ", self.game_board.current_state)
 
+# Scene Abstract Class
 class SixMenMorrisScene():
 	in_scene = None
 	scene_pool = {}
@@ -348,6 +367,7 @@ class SixMenMorrisScene():
 			return event.pos
 		return False
 
+# Main Menu Scene Concrete Class to define user in main menu behavior
 class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 	scene_name = "Main Menu"
 	def __init__(self, window):
@@ -362,6 +382,7 @@ class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 		self.two_player_button_pos = (WINDOW_WIDTH/2 - two_player_button_pos_size[0]/2, 600 - two_player_button_pos_size[1]/2)
 		self.background_pos = (int(WINDOW_WIDTH//2-self.background.get_rect().size[0]//2), 0)
 
+	# Change scene to this scene
 	def change_scene(self):
 		super().change_scene()
 		self.window.blit(self.background, self.background_pos)
@@ -369,6 +390,7 @@ class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 		self.window.blit(self.two_player_button, self.two_player_button_pos)
 		pygame.display.flip()
 
+	# Check user input in this scene
 	def check_event(self, event):
 		super().check_event(event)
 		try:
@@ -389,6 +411,7 @@ class SixMenMorrisMainMenuScene(SixMenMorrisScene):
 				SixMenMorrisScene.scene_pool[SixMenMorrisInGameScene.scene_name].assign_board(SixMenMorrisBoard())
 				SixMenMorrisScene.change_between_scene(SixMenMorrisInGameScene.scene_name)
 
+# End Game Scene Concrete Class to define user in end game behavior
 class SixMenMorrisEndGameScene(SixMenMorrisScene):
 	scene_name = "End Game"
 	END_GAME_TEXT_POSITION = (WINDOW_WIDTH/2, WINDOW_HEIGHT/3)
@@ -421,6 +444,7 @@ class SixMenMorrisEndGameScene(SixMenMorrisScene):
 				print("click main menu button")
 				SixMenMorrisScene.change_between_scene(SixMenMorrisMainMenuScene.scene_name)
 
+# In Game Scene Concrete Class to define user in game behavior
 class SixMenMorrisInGameScene(SixMenMorrisScene):
 	scene_name = "In Game"
 	# detect coord range
@@ -475,7 +499,7 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 
 		self.window.fill((BLACK))
 		self.window.blit(self.board_sprite, (0, 0))
-		# Display text
+		# Display tip text
 		game_font = pygame.font.SysFont("comicsansms", 60)
 		if self.game_board.current_player == self.game_board.WHITE_CHESS:
 			text = game_font.render("White team's turn", True, (0, 128, 196))
@@ -489,7 +513,7 @@ class SixMenMorrisInGameScene(SixMenMorrisScene):
 		text = game_font.render("Black chess killed: " + str(self.game_board.kill_count[self.game_board.BLACK_CHESS]), True, (0, 128, 196))			
 		self.window.blit(text, (int(self.BLACK_EATEN_TEXT_POSITION[0]-text.get_rect().size[0]//2), int(self.BLACK_EATEN_TEXT_POSITION[1]-text.get_rect().size[1]//2)))
 
-
+		# Display board, chess, and act tip
 		if self.game_board != None:
 			possible_act_list = self.game_board.get_possible_act_list()
 			for i in range(len(self.CHESS_COORD)):

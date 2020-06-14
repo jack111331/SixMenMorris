@@ -50,7 +50,7 @@ class AlphaBetaPruning():
             if possibleFormMill == 1 and possibleEnemyFormMill == 2:
                 totalValue += VALUE_FOR_BLOCK_ENEMY_TO_FORM_MILL
         return totalValue
-
+    # Deprecated board evaluation function
     # def evaluation_board(self, team, board):
     #     totalValue = 0
     #     KILL_VALUE_MULTIPLIER = 3
@@ -90,10 +90,11 @@ class AlphaBetaPruning():
 
     #     return totalValue
 
+    # evaluate board value, in short, the more we live, the higher the value. The move enemy live, the less the value
     def evaluation_board(self, team, board):
         totalValue = 0
         LIVE_AT_PLACE_VALUE = 6
-        ENEMY_LIVE_AT_PLACEVALUE = -3
+        ENEMY_LIVE_AT_PLACE_VALUE = -3
         LIVE_VALUE = 4
         ENEMY_LIVE_VALUE = -8
         print("Board Previous State:", board.previous_state)
@@ -105,7 +106,7 @@ class AlphaBetaPruning():
                 if board.get_chess_in(i) == team:
                     totalValue += LIVE_AT_PLACE_VALUE
                 elif board.get_chess_in(i) == (not team):
-                    totalValue += ENEMY_LIVE_AT_PLACEVALUE
+                    totalValue += ENEMY_LIVE_AT_PLACE_VALUE
 
             else:
                 if board.get_chess_in(i) == team:
@@ -115,30 +116,37 @@ class AlphaBetaPruning():
 
         return totalValue
 
+    # search through unfold board tree, return best act index and value
     def search(self, board, max_depth, turn, team, depth=1, boundary=(-INF, INF)):
         print("Depth:", depth, "Turn:", turn, "Team:", team, "Boundary:", boundary)
         # input()
         best_act = -1
+        # if reach max depth or board is in endgame state, compute board value for ourself
         if max_depth == depth or board.current_state == board.BOARD_STATE_ENDGAME:
             val = self.evaluation_board(team, board)
             print("Board Value:", val, "Board State:", board.chess_list)
             return best_act, val
 
+        # get possible next act
         possible_act_list = board.get_possible_act_list()
         for possible_act in possible_act_list:
             if best_act == -1:
                 best_act = possible_act
+            # copy a new board and act on this new board
             new_board = copy.deepcopy(board)
             new_board.act_chess(possible_act)
             temp, new_board_val = self.search(new_board, max_depth, not turn, team, depth+1, boundary)
             if new_board_val == self.INVALID:
+                # if next board is outside of boundary, then this act on board can never be best act
                 continue
 
             if turn == self.MYTURN:
+                # MAX search, update left boundary so we can filter the worse act
                 if boundary[0] < new_board_val:
                     boundary = (new_board_val, boundary[1])
                     best_act = possible_act
             else:
+                # MIN search, update right boundary so we can filter the worse act
                 if boundary[1] > new_board_val:
                     boundary = (boundary[0], new_board_val)
                     best_act = possible_act
