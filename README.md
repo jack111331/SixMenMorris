@@ -1,21 +1,13 @@
-# Othello
-黑白棋的 UI 和 AI 系統，此 AI 使用樹狀展開棋手的機會，並使用 AlphaBeta Cut 來使 AI 更快速運算。
-
-Othello UI & AI System, this AI use tree to examine the possible chances, then use AlphaBeta Cut to make AI calculate faster.
+# Six Men Morris
+莫里斯六子棋的 UI 和 AI 系統，此 AI 使用Alpha-Beta Pruning加速樹狀展開可能的盤面。
 
 ## Reqiurement
 - Python3
-    - Pygame
+    - Pygame 1.9.6
 
 ## Execute
 GUI 版
 
 ```
-python3 Othello_GUI.py
-```
-
-Console 版
-
-```
-python3 Othello.py
+python Six_Men_Morris_GUI.py
 ```
